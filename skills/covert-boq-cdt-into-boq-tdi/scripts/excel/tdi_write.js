@@ -4,7 +4,7 @@
 // Dán NGUYÊN khối này vào đầu mỗi script ghi dữ liệu / định dạng / Summary.
 // ============================================================================
 const TDI_W = (() => {
-  const D = {"THIET_BI": ["ACB", "BOM", "BW", "CTOC", "DEN", "FM200", "FOAM", "KSRV", "LLMT", "MBA", "MCB", "MCCB", "MFD", "MNN", "QUAT", "RMU", "TBBC", "TBCC", "TBDH", "TBDN", "TBVS", "TĐ", "UPS", "VAN", "VCG"], "LINEAR_UNITS": ["m", "m2", "m3", "md", "met", "m²", "m³", "mét"]};
+  const D = {"THIET_BI": ["ACB", "BOM", "BW", "CTOC", "DEN", "FM200", "FOAM", "KSRV", "LLMT", "MBA", "MCB", "MCCB", "MFD", "MNN", "QUAT", "RMU", "TBBC", "TBCC", "TBDH", "TBDN", "TBVS", "TS", "TĐ", "UPS", "VAN", "VCG"], "LINEAR_UNITS": ["m", "m2", "m3", "md", "met", "m²", "m³", "mét"]};
   const THIET_BI = new Set(D.THIET_BI), LINEAR = new Set(D.LINEAR_UNITS);
   const norm = (v) => (v === null || v === undefined ? "" : String(v).normalize("NFC").trim());
   // ---- đọc sheet CĐT theo khối: cols = {stt:"A", desc:"B", spec:"C"|null, code, brand, origin, unit:"G", zones:["H","I","J"]}

@@ -137,6 +137,7 @@ Gợi ý soát:
 - **Thiết bị dưới hệ máy phát, báo cháy, chữa cháy khí / bình xịt, foam**: lấy mã của hệ (MFD, TBBC, FM200, FOAM).
 - **Cáp ≥ 70mm² hoặc trung thế**: CAPLON. Cáp trong hệ Điện nhẹ: CAP DN.
 - **"Phụ kiện …"**: VTP. Co/cút/tê ghi rõ vật liệu: theo mã ống.
+- **Thông tắc sàn**: TS (nhóm thiết bị, × HSTB; thêm 27/10/2026). Không sửa về TBVS hay mã ống.
 - Chỉ dùng mã trong `references/chung_loai.md` (bộ mã theo bảng "Tra cứu từ khóa" TDI).
 - Sửa theo số dòng ưu tiên hơn sửa theo nhóm.
 

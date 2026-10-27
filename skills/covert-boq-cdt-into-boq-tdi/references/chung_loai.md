@@ -52,6 +52,7 @@ Script tự chọn công thức. Bảng này để Claude soát và sửa mã. *
 | OD | Ống đồng | VL |
 | Vencap | Ventcap, chụp thông hơi | VL |
 | TBVS | Thiết bị vệ sinh và phụ kiện (bồn cầu, lavabo, gương, lô giấy, khay xà phòng, kệ kính), phễu thu sàn, thiết bị bếp | TB |
+| TS | Thông tắc sàn (floor clean-out), kể cả nắp / ống thông tắc sàn, mọi vật liệu (uPVC, inox…). Thêm 27/10/2026; trước đây gán TBVS | TB |
 | MNN | Máy nước nóng, bình nóng lạnh, bơm nhiệt | TB |
 | LLMT | Năng lượng mặt trời | TB |
 
@@ -89,7 +90,8 @@ Co / cút / măng sông / nối ren / côn thu / tê **theo vật liệu ống**
 
 1. **Mô tả chỉ là kích thước** (DN150, Ø 9.5mm) hoặc chỉ là tên phụ kiện ống (Cút DN50) thì xét tiêu đề cha gần nhất. Đọc **chủ ngữ** của tiêu đề, bỏ phần "Cung cấp và lắp đặt…" và phần sau "bao gồm…".
 2. **Ống thì xem hệ thống.** Ống trong hệ Điện / ELV / Báo cháy là OLD. Ống âm đất thuộc hệ thoát thải là HDPE, thuộc PCCC là OTH.
-3. **Hệ thống "chi phối" thắng mã thiết bị lẻ.** Dưới hệ chữa cháy khí / bình xịt: FM200. Dưới foam: FOAM. Dưới hệ máy phát: MFD. Dưới Hệ thống báo cháy: TBBC (kể cả bộ nguồn, ắc quy). Ngoại lệ (giữ mã riêng): VTP, CTK, CPK, cáp, ống luồn, máng cáp, chống sét, TBCC, TBDN, ống, bảo ôn, CCL.
+3. **Hệ thống "chi phối" thắng mã thiết bị lẻ.** Dưới hệ chữa cháy khí / bình xịt: FM200. Dưới foam: FOAM. Dưới hệ máy phát: MFD. Dưới Hệ thống báo cháy: TBBC (kể cả bộ nguồn, ắc quy). Ngoại lệ (giữ mã riêng): VTP, CTK, CPK, cáp, ống luồn, máng cáp, chống sét, TBCC, TBDN, ống, bảo ôn, CCL, TS.
 4. **"Phụ kiện …" luôn là VTP**, kể cả trong hệ ống hay máng cáp. Ngoại lệ: phụ kiện đầu cáp, phụ kiện chống sét / tiếp địa.
-5. Cáp: tiết diện pha lấy từ chính dòng (vd `4Cx240mm2`, `1x4x(1Cx185)`). Dòng tiêu đề "Cáp, dây điện (Cu/PVC)" không có tiết diện thì từng dòng con tự xét.
-6. Nếu vẫn không chắc, để trống và liệt kê cho người dùng. Gán sai còn tệ hơn để trống, vì mã quyết định hệ số giá.
+5. **Có chữ "thông tắc sàn" (hoặc floor clean-out) thì là TS**, kể cả khi ghi vật liệu (uPVC, inox), mã FCO hay nằm dưới tiêu đề thoát nước / thiết bị vệ sinh. Chỉ thua dòng chi phí, thử áp / thử kín (CTK, CPK) và dòng "Phụ kiện …" (VTP). "Thông tắc" ống đứng, tường… không có chữ "sàn" thì vẫn theo luật cũ.
+6. Cáp: tiết diện pha lấy từ chính dòng (vd `4Cx240mm2`, `1x4x(1Cx185)`). Dòng tiêu đề "Cáp, dây điện (Cu/PVC)" không có tiết diện thì từng dòng con tự xét.
+7. Nếu vẫn không chắc, để trống và liệt kê cho người dùng. Gán sai còn tệ hơn để trống, vì mã quyết định hệ số giá.

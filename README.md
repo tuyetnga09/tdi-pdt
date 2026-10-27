@@ -51,6 +51,7 @@ Skill có nhắc tới 7 file sau nhưng chúng không nằm trong Project nên 
 
 ## Lịch sử
 
+- 0.2.5 (27/10/2026): `covert-boq-cdt-into-boq-tdi`: thêm mã Chủng loại `TS` cho đầu mục "Thông tắc sàn" (nhóm thiết bị, × HSTB; trước đây ra TBVS), sinh lại JS add-in.
 - 0.2.3 (27/10/2026): `boq-gan-ma-gia-thu-vien` và `boq_xml_tools.py`: dòng con bóc tách (đầu mục con) tự ghi `XOA` vào cột `In ấn`.
 - 0.2.2 (27/10/2026): thay `xemnguon.py` bằng bản 27/10/2026.
 - 0.2.1 (27/10/2026): cập nhật skill `boq-gan-ma-gia-thu-vien` (Quy tắc 39 mới: ô giá là tham chiếu ô trực tiếp, không dùng `HYPERLINK`).

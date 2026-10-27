@@ -51,6 +51,10 @@ RULES = [
     ("CTK", r"chi phí|\bphí\b(?! gia công)|lệ phí"),
     ("CPK", r"thí nghiệm|thử nghiệm|xét nghiệm|^\s*kiểm định|hiệu chỉnh rơ ?le"),
     ("CTK", r"nghiệm thu|vận hành thử|chạy thử|thử áp|thử kín|thử tải|testing|commissioning|đào tạo|hồ sơ hoàn công|thủ tục|bảo trì|bảo dưỡng|^\s*vận chuyển|nhân công|giàn giáo|xe nâng|sleeve|ống lồng|băng (?:cảnh )?báo|mốc (?:sứ )?báo|sứ (?:đánh dấu|báo)|đào đắp|cát (?:lót|đen|vàng|san)|^\s*(?:bệ|bê tông|xây|trát|gia cố|hoàn thiện|đào|đắp|lấp|khoan|đục|cắt)\b"),
+    # --- thông tắc sàn: mã riêng TS (thêm 27/10/2026, nhóm thiết bị × HSTB; trước đây ra TBVS / mã ống).
+    #     Đứng ngay sau luật chi phí / thử nghiệm, trước mọi luật khác (RMU có "fco", VTP, TBVS, INOX, UPVC…)
+    #     để "Thông tắc sàn FCO / inox / uPVC D110…" không bị nhận nhầm.
+    ("TS", r"thông\s+tắc\s+sàn|floor\s*clean.?out"),
     # --- trung thế, máy biến áp ---
     ("MBA", r"^(?!\s*tủ\b).*?(?:máy biến áp|trạm biến áp)|transformer"),
     ("RMU", r"\brmu\b|ring main unit|switchgear|tủ trung thế|mvsg|recloser|\blbs\b|cầu dao phụ tải|máy cắt (?:chân không|trung thế)|\bvcb\b|\bfco\b|cầu chì tự rơi|chống sét van|cảnh báo sự cố cáp"),
@@ -129,7 +133,7 @@ DOMINANT = [(code, re.compile(detone(p))) for code, p in [
     ("TBBC", r"hệ thống báo cháy|fire alarm system"),
 ]]
 NON_DOMINATED = {"VTP", "CTK", "CPK", "CAP", "CAPLON", "CAP DN", "OLD", "TMC", "CSTĐ", "TBCC", "TBDN",
-                 "OTH", "INOX", "PPR", "HDPE", "UPVC", "BO", "CCL"}
+                 "OTH", "INOX", "PPR", "HDPE", "UPVC", "BO", "CCL", "TS"}
 ELEC_SYSTEM = re.compile(detone(r"điện|\belv\b|\blv\b|chống sét|camera|cctv|âm thanh|thông tin|truyền hình|kiểm soát ra vào|báo cháy"))
 CONDUIT_HEAD = re.compile(detone(r"ống luồn|luồn dây|conduit|ruột gà"))
 PIPE_WORD = re.compile(detone(r"\bống\b|\bpvc\b|hdpe|\bg\.?i\b|conduit"))
@@ -256,7 +260,7 @@ def norm(s):
 THIET_BI = {
     "RMU", "MBA", "TĐ", "MFD", "UPS", "MCB", "MCCB", "ACB", "CTOC", "DEN", "BW",
     "TBBC", "TBDN", "KSRV", "VAN", "BOM", "TBCC", "FM200", "FOAM",
-    "QUAT", "VCG", "TBDH", "TBVS", "MNN", "LLMT",
+    "QUAT", "VCG", "TBDH", "TBVS", "TS", "MNN", "LLMT",
 }
 LINEAR_UNITS = {"m", "m2", "m3", "md", "m²", "m³", "mét", "met"}
 
