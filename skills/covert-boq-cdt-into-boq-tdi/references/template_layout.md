@@ -47,7 +47,7 @@ Ví dụ bên dưới dùng **Z = 3 khu** (Basement, Block A, Block B), giống 
 | P | Đơn giá gốc: Vật liệu | nhập tay (chữ xanh) |
 | Q | Đơn giá gốc: Nhân công | nhập tay (chữ xanh) |
 | R | Bộ lọc: Chủng loại | mã, xem `chung_loai.md` |
-| S | Bộ lọc: In ấn | để trống (file mẫu dùng `XOA` để đánh dấu dòng không in) |
+| S | Bộ lọc: In ấn | để trống (file mẫu dùng `XOA` để đánh dấu dòng không in). Riêng dòng con bóc tách (Loại dòng `Con`, do skill `boq-gan-ma-gia-thu-vien` chèn) luôn ghi `XOA` |
 | T | Tổng KL tạm tính | `=+Kr` |
 | U–AL | Diễn giải chi tiết KL (18 cột: Trục chính 2, Tầng hầm 3, Khối đế 3, Hành lang 3, Căn hộ 5, Khác 2) | để trống, cột được group và ẩn |
 | AM | KL | `=IF(OR(Or="m",Or="m2",Or="m3"),Tr*$T$9,Tr)` |

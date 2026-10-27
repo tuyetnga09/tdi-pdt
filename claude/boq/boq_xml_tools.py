@@ -5,7 +5,7 @@ Lệnh:
   sheets   FILE                         : tên sheet -> file XML (luôn tra lại, Excel hay đổi số)
   cols     FILE SHEET                   : nhận diện cột TDI + cột phụ theo tiêu đề (in JSON)
   helpers  FILE OUT SHEET...            : tạo 5 cột phụ (Nhóm VT, Độ tin cậy, Ghi chú gán mã, Hệ số ĐV, Loại dòng) nếu chưa có
-  insert   FILE OUT PLAN.json           : bóc tách - chèn dòng con dưới dòng cụm, tô màu phần TDI
+  insert   FILE OUT PLAN.json           : bóc tách - chèn dòng con dưới dòng cụm, tô màu phần TDI, ghi XOA (không dấu cách) vào cột In ấn của dòng con
   fillcdt  FILE OUT CFG.json            : đưa đơn giá TDI sang cột giá BOQ CĐT bằng công thức
   recalc   FILE [--sheets 'A|B']          : xóa cache <v>, tính lại bằng LibreOffice trên BẢN SAO, báo lỗi/tổng/có mã không giá
   cleanup  FILE OUT                     : xóa sheet tạm _TDI_JOB / _TDI_TMP_*
@@ -26,6 +26,7 @@ NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 q = lambda t: '{%s}%s' % (NS, t)
 HELPERS = ['Nhóm VT', 'Độ tin cậy', 'Ghi chú gán mã', 'Hệ số ĐV', 'Loại dòng']
+IN_AN_XOA = 'XOA'   # giá trị cột "In ấn" đánh dấu dòng không in (dòng con bóc tách): chữ XOA, không dấu cách (chốt 27/10/2026)
 COLOR_NAME, COLOR_CODE, FILL_CHILD = 'FF0070C0', 'FFFF0000', 'FFFFF2CC'
 CONF_ORDER = ['Cao', 'TB', 'Thấp', 'Chưa khớp']
 
@@ -144,6 +145,8 @@ def detect_cols(pkg, sheet, hdr_rows=(1, 12)):
     if dg: res.update(vl=dg, nc=dg + 1, dg=dg + 2)
     for h in HELPERS:
         res[h] = first(h, name)
+    # cột "In ấn": nhận theo tiêu đề; không thấy thì lấy vị trí chuẩn N+7 (sau Chủng loại)
+    res['in_an'] = first('In ấn', name) or (name + 7)
     # dòng tiêu đề chính (để tạo cột phụ)
     rows = [r for r, c in by.get(norm('Nội Dung Công Việc'), []) if c == name]
     res['hdr_row'] = rows[0] if rows else 5
@@ -268,6 +271,7 @@ def cmd_insert(f, out, planfile):
             if miss: raise SystemExit('%s thiếu cột phụ %s - chạy lệnh helpers trước' % (name, miss))
             nm, cd, un, vl0, nc0 = C['name'], C['code'], C['unit_tdi'], C['vl0'], C['nc0']
             hg, hc, hn, hk, hl = (C[h] for h in HELPERS)
+            ia = C.get('in_an')
             KL, VL, NC = CL(hk), CL(vl0), CL(nc0)
             rows = {int(r.get('r')): r for r in sd}
             for sh, rn, exp, ch, note, conf in P:
@@ -305,6 +309,7 @@ def cmd_insert(f, out, planfile):
                     setc(row, hg, c['g']); setc(row, hc, c['conf'])
                     if c.get('note'): setc(row, hn, c['note'])
                     setc(row, hk, num=c.get('coef', 1)); setc(row, hl, 'Con')
+                    if ia: setc(row, ia, IN_AN_XOA)   # dòng con bóc tách: đánh dấu không in
                     sd.insert(idx + 1 + j, row)
                 setc(prow, cd, '')
                 for col, L in ((vl0, VL), (nc0, NC)):
