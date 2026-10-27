@@ -1,0 +1,127 @@
+{
+ "du_an": "BKY CN8",
+ "ma_du_an": "TDI26807",
+ "ngay_gui": "",
+ "han_bao_gia": "Sớm nhất có thể",
+ "dia_chi_giao_hang": "(THỬ NGHIỆM) điền địa chỉ giao hàng của dự án",
+ "nguoi_nhan": {
+  "_mac_dinh": "Lê Minh Tuấn - 0942.468.130 - Email: tuanlm@tdimep.vn"
+ },
+ "hoa_don": {
+  "cong_ty": "CÔNG TY CỔ PHẦN TẬP ĐOÀN TDI",
+  "dia_chi": "A16-NV6, ô số 10, KĐT mới đường Lê Trọng Tấn, An Khánh, Hoài Đức, HN",
+  "mst": "0307717044",
+  "dien_thoai": "(024) 7308.6632 - info@tdigroup.vn - www.tdigroup.vn"
+ },
+ "thu_tu_he": [
+  "Điện",
+  "Điện nhẹ",
+  "Cấp thoát nước",
+  "HVAC",
+  "PCCC",
+  "Xây dựng"
+ ],
+ "he_mac_dinh": "Khác",
+ "nhom_mac_dinh": "Hạng mục khác",
+ "ten_he": {
+  "Điện": "hệ Điện",
+  "Điện nhẹ": "hệ Điện nhẹ",
+  "Cấp thoát nước": "hệ Cấp thoát nước",
+  "HVAC": "hệ Thông gió - Điều hòa (HVAC)",
+  "PCCC": "hệ PCCC",
+  "Xây dựng": "hạng mục Xây dựng",
+  "Khác": "các hạng mục khác"
+ },
+ "vv": "Đề nghị báo giá {he} - Dự án {du_an}, quy cách như bảng dưới đây.",
+ "quy_tac_he": [
+  {
+   "he": "Xây dựng",
+   "nhom": "^xd –|^xây dựng"
+  },
+  {
+   "he": "Điện",
+   "mo_ta": "tủ điện|ring main|\\brmu\\b|máy biến áp|trạm biến áp|đầu cáp trung thế"
+  },
+  {
+   "he": "PCCC",
+   "mo_ta": "chữa cháy|báo cháy|đầu phun|sprinkler|trụ tiếp nước|họng|\\bfire\\b|pccc|van xả khí"
+  },
+  {
+   "he": "HVAC",
+   "mo_ta": "quạt|louver|cửa gió|miệng gió|van gió|cổ bạt|chụp thời tiết|ống gió|\\bprd\\b|\\bvcd|\\bnrd\\b|bảo ôn|điều hòa"
+  },
+  {
+   "he": "HVAC",
+   "mo_ta": "van xả áp|\\bmfd\\b|\\bmd\\b|chặn lửa|ống gió"
+  },
+  {
+   "he": "Điện nhẹ",
+   "mo_ta": "cáp quang|cat6|camera|mạng lan|\\bloa\\b|access"
+  },
+  {
+   "he": "Điện",
+   "mo_ta": "\\bmcb\\b|\\bmccb\\b|cầu dao|recloser|\\blbs\\b|sứ|cáp ngầm|kios|máy phát|giằng neo|hộp kỹ thuật đấu dây|điện trở sấy|bình dầu"
+  },
+  {
+   "he": "Cấp thoát nước",
+   "mo_ta": "công tắc áp suất|công tắc dòng chảy|phao|bình tích áp|cút hướng dòng|composite|ventcap|ống thông hơi"
+  },
+  {
+   "he": "Điện",
+   "nhom": "tủ điện|trung thế|chống sét|dụng cụ an toàn điện|chiếu sáng|thang / máng cáp"
+  },
+  {
+   "he": "Điện nhẹ",
+   "nhom": "điện nhẹ"
+  },
+  {
+   "he": "PCCC",
+   "nhom": "^pccc"
+  },
+  {
+   "he": "HVAC",
+   "nhom": "^hvac"
+  },
+  {
+   "he": "Cấp thoát nước",
+   "nhom": "bơm|^van /"
+  }
+ ],
+ "uu_tien": [
+  "tủ điện",
+  "trung thế",
+  "máy biến áp",
+  "\\brmu\\b",
+  "bơm",
+  "quạt",
+  "điều hòa",
+  "busway",
+  "máy phát"
+ ],
+ "hang_khoa": [
+  "Grundfos",
+  "Daikin",
+  "York",
+  "Schneider",
+  "Trane",
+  "Carrier",
+  "Ebara",
+  "Wilo",
+  "Mitsubishi",
+  "Hitachi",
+  "ABB",
+  "Siemens",
+  "Hochiki",
+  "Notifier"
+ ],
+ "chu_y": [
+  "- Đơn giá chào bằng VNĐ, ghi rõ đã hay chưa gồm VAT; giá giao đến chân công trình.",
+  "- Ghi rõ hãng sản xuất, mã hiệu (model), xuất xứ; gửi kèm catalogue; hàng có CO, CQ.",
+  "- Ghi rõ thời gian giao hàng, thời gian bảo hành và hiệu lực của báo giá.",
+  "- Nếu chào hàng tương đương hoặc khác quy cách, ghi rõ tại cột Ghi chú.",
+  "- Vui lòng giữ nguyên STT và thứ tự dòng của bảng này khi gửi lại báo giá."
+ ],
+ "doi_ten_nhom": {
+  "Khác (ME)": "Vật tư, thiết bị khác"
+ }
+}

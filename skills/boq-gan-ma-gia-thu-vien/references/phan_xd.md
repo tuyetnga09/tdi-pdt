@@ -1,0 +1,39 @@
+<!-- Tách nguyên văn từ SKILL.md ngày 21/10/2026. Gồm Phần XD và Phụ lục C. -->
+
+## Phần XD. Hệ Xây dựng (thư viện `TVGIA`)
+
+Dùng chung nguyên tắc, Quy tắc 1, 2, 8, 10, điểm dừng, giao thức một file và thang độ tin cậy với MEP. Chỉ ghi phần **khác**.
+
+- **Thư viện**: sheet **`TVGIA`** trong file BOQ, **không có Mã hiệu / Nhóm VT**, khóa là **Tên công việc** (cột B). Giá 1 ĐVT: **VL = cột G, NC = cột J** (VLOOKUP cột 6 và 9). Nguồn `TVGIA` dò theo mục "Vị trí thư viện giá": file thư viện XD của dự án (ví dụ `2.Thu vien gia XD.xlsx`) trước, không có mới dùng `01. File nội bộ TDI.xlsx` bản mới nhất; file nguồn phải qua kiểm bố cục (sheet `TVGIA`, cột B / G / J). Thiếu `TVGIA` trong file BOQ → dừng, nhờ người dùng chép sheet từ file nguồn đó (hoặc chạy `build` của skill chuyển template), không dựng lại bằng openpyxl. Đã có `TVGIA` → so với file nguồn (số dòng, ΣG, ΣJ), lệch thì báo và hỏi.
+- **Nhận diện sheet XD**: hàng 3 có **hai cột "Công tác"** (VL: S–W, NC: X–AB; sheet thoát nước mưa/thải lệch cột, script tự nhận theo tiêu đề). File có cả hai hệ chạy song song, báo cáo chia hai phần; mỗi sheet chỉ dùng thư viện hệ mình, không lấy giá chéo hệ.
+- **Công thức**: `Công tác VL = TVGIA!B<dòng>`, `Đơn giá VL = VLOOKUP(Công tác, TVGIA!$B:$J, 6, 0)`, NC cột 9. **Tên trùng** (151 dòng ở bản BKY) → VLOOKUP trả dòng đầu, nên dùng **tham chiếu trực tiếp** `=TVGIA!G<dòng>` / `J<dòng>` (`write` tự ép). **Gán dòng cha** của cụm (dòng con không STT nằm trong `SUBTOTAL`), chỉ gán dòng con khi BOQ tách đúng thành phần. Giá đã gồm quy đổi (`/1.07`, `×1.05`…) thì **không nhân lại**.
+- **Bóc tách XD theo TVGIA + cột Tên công việc (Quy tắc 33, chốt 16/10/2026)**: làm sau khi gán xong và duyệt, bằng `xd_restruct.py` + `xd_lib.py` (lưu ở Project dự án `claude/boq/`; chưa có trong `_Claude_tools`, thiếu thì dựng lại theo mô tả này, ghi vào "Bước đã bỏ qua / làm khác skill"). Chạy **cuối cùng** trong chuỗi vì các bước ghi giá (6c, fillcdt, fillxd) dùng toạ độ XD cũ.
+  1. **Chèn cột N** sau Nội dung (TDI) ở mọi sheet XD, dời **mọi** tham chiếu (công thức, sheet Summary, defined name, filter, merge, CF, `<cols>`, selection). Header gộp 2 dòng như các cột TDI khác.
+  2. **Droplist** từ sheet ẩn `DS_TVGIA`: nhãn = tên đầu mục TVGIA; tên trùng hoặc dài hơn 250 ký tự thêm ` [#dòng TVGIA]`; thay `*` bằng `×`, xuống dòng bằng `; ` (MATCH coi `* ? ~` là ký tự đại diện và giới hạn 255 ký tự). Chỉ phủ dòng gán TVGIA, không phủ dòng con (`errorStyle=warning`).
+  3. **Cột phụ cuối khối TDI**: `Loại dòng` (`Dòng` / `Cụm` / `Con`), `Dòng TVGIA` (INDEX/MATCH từ cột N), `Kiểm bóc tách` (cảnh báo khi số con của đầu mục đang chọn khác số dòng con đã chèn). Công tác VL/NC và Đơn giá VL/NC của dòng gán thành `INDEX(TVGIA!cột, Dòng TVGIA)`, nên đổi cột N là giá đổi. **Dòng giá viết riêng** (cộng thêm dòng khác, nhân hệ số, VL và NC lấy hai dòng khác nhau) giữ nguyên công thức, ghi Ghi chú "không đổi theo cột N".
+  4. **TVGIA có 2 cấp**: đầu mục → dòng con → thành phần của dòng con (ví dụ trát: vữa XM → cát, nước, xi măng). Nhận diện cấp: dòng con có Đơn giá F bằng Σ Thành tiền G các dòng liền sau (hoặc dòng nhãn "H > 5m" có G = Σ). Bóc tách mọi dòng BOQ gán vào đầu mục có con: chèn đủ mọi cấp (`Cụm` / `Con`), tô nền `FFF2CC` từ cột Nội dung, dòng con là công thức động theo đầu mục đang chọn (dòng TVGIA + j; vượt số con thì để trống). Hệ số nhân dồn theo cấp (Khối lượng × D×E các cấp trên) nằm ở sheet `DS_TVGIA`, công thức sống trên `TVGIA`.
+  5. **Dòng con không cộng vào tổng**: cột đơn giá TDI và Tổng của dòng con để trống, Thành tiền VL/NC chỉ để xem; dòng tổng của sheet đổi từ `SUBTOTAL` sang `SUMIFS(..., Loại dòng, "<>Con")`, mở rộng vùng tới hết dòng con cuối. Dòng cha giữ đơn giá TVGIA; Σ con ≠ cha (thư viện có hao phí ở dòng cha, nhân công chỉ ghi ở dòng cha, nhãn biến thể H>5m / H<5m) thì ghi chênh vào Ghi chú gán giá của dòng cha, **không đổi giá cha**.
+  6. **Khôi phục định dạng sheet `TVGIA`** từ file thư viện nguồn: kiểu ô (font, fill nhóm, viền, định dạng số), độ rộng cột, gộp ô tiêu đề, cố định 2 dòng đầu; kiểm tên công việc từng dòng khớp với nguồn trước khi áp. Ô ghi chú dạng "= …" bị lưu thành công thức lỗi (`#NAME?`) chuyển thành chữ; comment của file thư viện chép vào cột K.
+  7. **Kiểm**: so từng ô cũ / mới sau `recalc` (không ô nào khác, trừ Ghi chú được nối thêm; Summary XD và tổng từng sheet không đổi), 0 ô lỗi, đếm đầu mục Σ con = cha và liệt kê đầu mục lệch, thử đổi cột N trên một bản sao (giá và dòng con đổi đúng), lint XML (hàng / ô tăng dần, thứ tự phần tử sheet, style index, merge không chồng, **`<cols>` không chồng nhau**: lỗi có sẵn ở sheet ME sau bước chuyển template, chuẩn hoá theo "dải hẹp thắng, bằng nhau thì khai báo trước thắng").
+- **Kiểu dòng hợp lệ, đừng "sửa"**: kế thừa (tham chiếu dòng trên / sheet khác), cộng thêm (`plus_vl`, ví dụ phụ gia bê tông), quy đổi (`coef_vl` / `coef_nc`, ghi lý do), NC từ đầu mục khác (`tv_nc`), chỉ NC / chỉ VL (`"vl":false` / `"nc":false`), cụm có `SUBTOTAL`, tỷ lệ % (giữ công thức, không gán), **số cứng giá thầu phụ (giữ nguyên, không ghi đè)**, dòng ghi chú loại trừ ("CĐT yêu cầu không báo giá", "Đã tính ở …": không gán, không giá). **Không sửa hệ số** `S1`/`X1` và hệ số phần, chỉ báo.
+- **Quy trình** (`XD=boq_xd_tools.py`, lấy cùng cách script MEP, không tự viết lại): `tv FILE tv.json` (danh mục, cờ trùng tên / dòng con) → `todo FILE todo.json SHEET…` (chỉ xử lý `can_gan`) → `apply FILE BANG_KHOP_XD.xlsx todo.json A.json <mã DA>` (Bảng khớp XD là cuối cùng) → Claude gán dòng `left` theo mục → thông số (Phụ lục C), ghi quy tắc đã áp → `write FILE OUT ASSIGN.json` một lần (`{"sheet","row","tv","plus_vl","tv_nc","coef_vl","vl","conf","note"}`, `tv` là số dòng `TVGIA` của bản đang dùng) → `recalc` (ô lỗi = 0 ở dòng có ĐVT, tổng hàng 4 chỉ đổi do dòng mới gán, ĐVT BOQ = ĐVT `TVGIA`, mác / dày khớp) → sau khi duyệt `export` vào `BANG_KHOP_XD.xlsx`. Dòng còn Chưa khớp sau khi tra `TVGIA`: để trống giá (giá tham khảo web do `boq-gia-tham-khao-web` ghi sau; cột `Nguồn giá` và bộ lọc theo Bước 6c). Dòng Chưa khớp XD cũng vào file tổng hợp Bước 6d (Nhóm lấy theo hạng mục lớn của BOQ, Vị trí là `sheet!dòng`). Báo cáo XD: số dòng theo trạng thái, độ tin cậy, tổng hàng 4 trước / sau, nguồn giá `TVGIA`, dòng cần xác nhận; sau bóc tách (Quy tắc 33): số cụm / dòng con, số đầu mục Σ con ≠ cha, số dòng giá viết riêng.
+
+
+# Phụ lục C. Tra `TVGIA` hệ Xây dựng
+
+Danh mục theo mục A…U lấy bằng `python3 $XD tv` (số dòng đổi theo bản). Tên BOQ → đầu mục đã duyệt nằm trong `BANG_KHOP_XD.xlsx` (sheet `Khop_XD`): tra ở đó trước. Điểm cần khớp: cọc khoan nhồi theo D và **địa chất**; nền theo lớp / độ dày / **K**; bê tông theo mác (NC dùng chung, phụ gia **cộng thêm**); ván khuôn theo móng / cột-vách-thang / dầm-sàn; xây theo dày 110 / 220 và ĐVT m³ hay m²; sơn theo trong / ngoài, đã bả hay không; ốp lát theo loại + kích thước + men + lát hay ốp; panel theo tôn / lõi / tôn; cống BTCT theo D + đế + gioăng.
+
+
+## C3. Khớp sai cần tránh (XD)
+
+| Sai | Đúng |
+|---|---|
+| Lấy dòng con định mức (Gạch xây, Cát mịn, Xi măng, Nước, Ván khuôn, Cây chống) cho cả công tác | Dòng cha (Xây tường…, Ván khuôn gỗ phủ phim…) |
+| VLOOKUP tên trùng → ra dòng đầu (ốp ra giá lát, NC thấp hơn) | Tham chiếu trực tiếp dòng đúng |
+| BOQ m³ lấy dòng xây m² (hoặc ngược lại); BOQ m² lấy thép hộp kg | Đúng ĐVT; lệch ĐVT không quy đổi được → Chưa khớp |
+| Bê tông cọc lấy "Bê tông M400" thường | "Bê tông cọc đá 1x2, mác 400, độ sụt 18-20cm" |
+| Gán giá cho dòng ghi "CĐT yêu cầu không báo giá" / "đã tính ở …" | Để trống, ghi lý do |
+| Ghi đè giá thầu phụ số cứng hoặc công thức tỷ lệ % | Giữ nguyên |
+| Áp hệ số quy đổi `/1.5` cho cả NC khi bản gốc chỉ quy đổi VL | Hệ số riêng từng bên |
+| Cộng cả dòng con bóc tách vào tổng sheet (đếm trùng với dòng cha) | Dòng con Loại dòng = `Con`, tổng dùng SUMIFS loại `Con` (Quy tắc 33) |
+| Đổi giá cha thành Σ con khi thư viện lệch | Giữ giá cha TVGIA, ghi chênh, báo người dùng |
