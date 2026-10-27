@@ -46,7 +46,6 @@ let
         else if Text.Contains(t, "description") then "Description"
         else if Text.Contains(t, "unit") or Text.Contains(t, "đvt") or Text.Contains(t, "đơn vị")
              or Text.Contains(Text.Remove(t, " "), "đ.vị") then "ĐVT"
-        else if Text.Contains(t, "báo giá vt") then "Giá VL chưa CK"
         else if Text.Contains(t, "nhân công ước") then "Giá NC ước tính"
         else if t = "vật liệu" then "Giá VL gốc"
         else if t = "nhân công" then "Giá NC gốc"
@@ -91,14 +90,14 @@ let
                 and not LaMaHieu([Mã hiệu])
                 and Record.FieldOrDefault(_, "ĐVT") <> null
                 and Text.Trim(Text.From(Record.FieldOrDefault(_, "ĐVT"))) <> ""),
-    CotGia = List.Select({"Giá VL gốc", "Giá NC gốc", "Giá VL chưa CK", "Giá NC ước tính"},
+    CotGia = List.Select({"Giá VL gốc", "Giá NC gốc", "Giá NC ước tính"},
                 each List.Contains(Table.ColumnNames(LocDong), _)),
     DoiSo = Table.TransformColumns(LocDong, List.Transform(CotGia, (c) =>
                 {c, each let n = try Number.From(_) otherwise null in if n = 0 then null else n,
                  type nullable number})),
     Cot = Table.ColumnNames(DoiSo),
     Dau = List.Select({"Nhóm VT", "Mã hiệu", "Tên công việc", "ĐVT",
-                "Giá VL gốc", "Giá NC gốc", "Giá VL chưa CK", "Giá NC ước tính"},
+                "Giá VL gốc", "Giá NC gốc", "Giá NC ước tính"},
                 each List.Contains(Cot, _)),
     SapXep = Table.ReorderColumns(DoiSo, Dau & List.RemoveItems(Cot, Dau & {"Sheet nguồn"}) & {"Sheet nguồn"})
 in

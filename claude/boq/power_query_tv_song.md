@@ -40,7 +40,7 @@ Bảng nạp bằng bản cũ của Power Query từng thiếu 685 dòng, nên k
 
 ## 5. Khi dùng tiếp với `boq-gan-ma-gia-thu-vien`
 
-- Bảng `TV` đã có cột P–S: **không chạy `hsloai`**.
+- Bảng `TV` đã có cột O–R: **không chạy `hsloai`**.
 - **Không chạy `tv_loader.py load … --replace`** trên bảng `TV` này (sẽ phá bảng của query). Thư viện đổi thì bấm Refresh.
 - `check` báo LỆCH GIÁ do thư viện vừa cập nhật: đó là giá mới đúng ý link sống, Refresh rồi `check` lại.
 - Sửa giá thư viện ở **file nguồn** (cột Số liệu gốc), không sửa trong sheet `2 Thu vien gia`.
@@ -105,8 +105,6 @@ let
         if s = "vật liệu" and vlOk then "Giá VL gốc"
         else if s = "nhân công" and vlOk then "Giá NC gốc"
         else if Text.Contains(t, "nhân công") and Text.Contains(t, "ước") then "Giá NC ước tính"
-        else if List.AnyTrue(List.Transform({"báo giá", "báo gía", "b.giá", "chưa chiết khấu"}, each Text.Contains(t, _)))
-                and not Text.Contains(t, "nhân công") then "Giá VL chưa CK"
         else if Text.Contains(t, "mã hiệu") and not Text.Contains(s, "mã hiệu") then "Mã hiệu"
         else if t = "tên công việc" then "Tên công việc"
         else if Text.StartsWith(t, "unit") or Text.Contains(t, "đ. vị") or t = "đvt" then "ĐVT"
@@ -115,10 +113,10 @@ let
         else if Text.Contains(t, "nhãn hiệu") and Text.Contains(t, "xuất xứ") then "Nhãn Hiệu Xuất Xứ"
         else null,
 
-    CotNguon = {"Mã hiệu", "Tên công việc", "ĐVT", "Giá VL gốc", "Giá NC gốc", "Giá VL chưa CK",
+    CotNguon = {"Mã hiệu", "Tên công việc", "ĐVT", "Giá VL gốc", "Giá NC gốc",
                 "Giá NC ước tính", "Description", "Ghi chú TV", "Nhãn Hiệu Xuất Xứ"},
     CotRa = {"Loại vật liệu", "Mã hiệu", "Tên công việc", "ĐVT", "Giá VL gốc", "Giá NC gốc",
-             "Giá VL chưa CK", "Giá NC ước tính", "Description", "Ghi chú TV", "Nhãn Hiệu Xuất Xứ",
+             "Giá NC ước tính", "Description", "Ghi chú TV", "Nhãn Hiệu Xuất Xứ",
              "Sheet nguồn", "File nguồn", "Ngày cập nhật", "Nhóm file",
              "Giá VL thư viện (thô)", "Giá NC thư viện (thô)", "HS VL (Loại VL)", "HS NC (Loại VL)"},
 
@@ -139,10 +137,9 @@ let
                     dvt = ToText(r[#"ĐVT"]),
                     vl  = Gia(r[#"Giá VL gốc"]),
                     nc  = Gia(r[#"Giá NC gốc"]),
-                    ck  = Gia(r[#"Giá VL chưa CK"]),
                     ut  = Gia(r[#"Giá NC ước tính"]),
                     coMa  = ma <> null and ma <> "0",
-                    coGia = List.AnyTrue(List.Transform({vl, nc, ck, ut}, each _ <> null and _ <> 0)),
+                    coGia = List.AnyTrue(List.Transform({vl, nc, ut}, each _ <> null and _ <> 0)),
                     giu   = (coMa and dvt <> null) or (coMa and ten <> null and coGia) or (ten <> null and dvt <> null),
                     tu = List.Select({
                             ToText(r[#"Ghi chú TV"]),
@@ -156,7 +153,7 @@ let
                     [#"Loại vật liệu" = Loai, #"Mã hiệu" = ma, #"Tên công việc" = ten, #"ĐVT" = dvt,
                      #"Giá VL gốc" = (if vl = null then null else vl * HSV),
                      #"Giá NC gốc" = (if nc = null then null else nc * HSN),
-                     #"Giá VL chưa CK" = ck, #"Giá NC ước tính" = ut,
+                     #"Giá NC ước tính" = ut,
                      #"Description" = ToText(r[Description]), #"Ghi chú TV" = ghi,
                      #"Nhãn Hiệu Xuất Xứ" = ToText(r[#"Nhãn Hiệu Xuất Xứ"]),
                      #"Sheet nguồn" = Nhan, #"File nguồn" = fn, #"Ngày cập nhật" = ngay, #"Nhóm file" = nhom,
@@ -217,7 +214,7 @@ let
     GopLai   = Table.Combine(CoBang[Bang]),
     Kieu     = Table.TransformColumnTypes(GopLai, {
                    {"Giá VL gốc", type nullable number}, {"Giá NC gốc", type nullable number},
-                   {"Giá VL chưa CK", type nullable number}, {"Giá NC ước tính", type nullable number},
+                   {"Giá NC ước tính", type nullable number},
                    {"Giá VL thư viện (thô)", type nullable number}, {"Giá NC thư viện (thô)", type nullable number},
                    {"HS VL (Loại VL)", type number}, {"HS NC (Loại VL)", type number}})
 in

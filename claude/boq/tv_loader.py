@@ -20,9 +20,9 @@ NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
 RNS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
 PR = 'http://schemas.openxmlformats.org/package/2006/relationships'
 q = lambda t: '{%s}%s' % (NS, t)
-COLS = ['Column1', 'Mã hiệu', 'Tên công việc', 'ĐVT', 'Giá VL gốc', 'Giá NC gốc', 'Giá VL chưa CK', 'Giá NC ước tính',
+COLS = ['Column1', 'Mã hiệu', 'Tên công việc', 'ĐVT', 'Giá VL gốc', 'Giá NC gốc', 'Giá NC ước tính',
         'Description', 'Ghi chú TV', 'Nhãn Hiệu Xuất Xứ', 'Sheet nguồn', 'File nguồn', 'Ngày cập nhật']
-NUM = {'Giá VL gốc', 'Giá NC gốc', 'Giá VL chưa CK', 'Giá NC ước tính'}
+NUM = {'Giá VL gốc', 'Giá NC gốc', 'Giá NC ước tính'}
 
 
 def norm(s): return re.sub(r'\s+', ' ', str(s or '')).strip().lower()
@@ -33,8 +33,6 @@ def std_name(top, sub):
     if s == 'vật liệu' and ('số liệu gốc' in t or t == ''): return 'Giá VL gốc'
     if s == 'nhân công' and ('số liệu gốc' in t or t == ''): return 'Giá NC gốc'
     if 'nhân công' in t and 'ước' in t: return 'Giá NC ước tính'
-    if ('báo giá' in t or 'báo gía' in t or 'b.giá' in t or 'vật tư theo báo giá' in t or 'chưa chiết khấu' in t) and 'nhân công' not in t:
-        return 'Giá VL chưa CK'
     if 'mã hiệu' in t and 'mã hiệu' not in s: return 'Mã hiệu'
     if t == 'tên công việc': return 'Tên công việc'
     if t.startswith('unit') or 'đ. vị' in t or t == 'đvt': return 'ĐVT'

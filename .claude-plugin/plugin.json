@@ -1,6 +1,6 @@
 {
   "name": "tdi-boq",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Bộ skill lập giá BOQ dự thầu của Phòng Đấu thầu TDI: chuyển BOQ CĐT sang template TDI, gán mã hiệu và giá thư viện, tra giá tham khảo, tạo YCBG, lấy và ghi giá NCC.",
   "author": { "name": "Phòng Đấu thầu TDI" },
   "keywords": ["boq", "dau-thau", "tdi", "bao-gia"]

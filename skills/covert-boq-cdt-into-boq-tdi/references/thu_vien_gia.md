@@ -65,7 +65,7 @@ Làm **tự động** ngay sau khi `run` đạt, **trước** khi giao file, cho
    Kết quả: sheet `2 Thu vien gia` ở cuối file, bảng Excel tên **`TV`**. Các cột:
    - **`Loại vật liệu`** (cột đầu, trước 15/10/2026 tên `Column1`; chính là Nhóm VT, công thức dùng `TV[Loại vật liệu]`)
    - `Mã hiệu`, `Tên công việc`, `ĐVT`
-   - `Giá VL gốc`, `Giá NC gốc`, `Giá VL chưa CK`, `Giá NC ước tính`
+   - `Giá VL gốc`, `Giá NC gốc`, `Giá NC ước tính`
    - `Description`, `Ghi chú TV`, `Nhãn Hiệu Xuất Xứ`
    - `Sheet nguồn`, `File nguồn`, `Ngày cập nhật` (dùng làm nguồn giá "Thư viện")
    - `Nhóm file` (nhóm cũ theo file: TCap, OLDay, PVC…; chỉ để đối chiếu và chuyển đổi BOQ cũ, không dùng để gán)

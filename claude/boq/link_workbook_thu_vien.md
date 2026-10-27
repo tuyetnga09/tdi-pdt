@@ -4,7 +4,7 @@ _Soạn 22/10/2026 theo yêu cầu phòng (cách thủ công cũ là link từng
 
 ## 1. Hành vi
 
-- Ô giá trong bảng `TV` (sheet `2 Thu vien gia`) là **công thức trỏ vào ô giá của file thư viện** (`='[1]Ong HDPE'!$E$9`), đúng như link tay: các cột `Giá VL thư viện (thô)`, `Giá NC thư viện (thô)`, `Giá VL chưa CK`, `Giá NC ước tính`.
+- Ô giá trong bảng `TV` (sheet `2 Thu vien gia`) là **công thức trỏ vào ô giá của file thư viện** (`='[1]Ong HDPE'!$E$9`), đúng như link tay: các cột `Giá VL thư viện (thô)`, `Giá NC thư viện (thô)`, `Giá NC ước tính`.
 - `Giá VL gốc` / `Giá NC gốc` (E, F) vẫn là thô × hệ số Loại VL (Quy tắc 24), nên đổi giá thư viện thì E, F và mọi công thức `SUMIFS(TV[…])` đổi theo.
 - **Một chiều**: sửa giá trong BOQ không ghi ngược vào file thư viện. Sửa giá ở file nguồn rồi **lưu**, mở BOQ → Excel hỏi cập nhật link → **Update Values** (hoặc Data → Edit Links → Update Values). File thư viện **không cần mở**.
 - Cột cuối mới `Kiểm dòng nguồn`: `OK` nếu ô nguồn vẫn đúng **Mã hiệu + Tên công việc** của dòng TV; `LỆCH DÒNG` nếu thư viện bị chèn / xóa dòng làm link trỏ sai ô; `KHÔNG LINK` nếu dòng không nối được (giá giữ tĩnh).
@@ -12,7 +12,7 @@ _Soạn 22/10/2026 theo yêu cầu phòng (cách thủ công cũ là link từng
 ## 2. Thứ tự làm (Claude làm trong skill chuyển template)
 
 1. Nạp `TV` bằng `tv_loader.py load` rồi `check` = 0/0/0 (như thường).
-2. `boq_xml_tools.py hsloai FILE OUT` (bản 15/10/2026 chiều trở lên) để có cột P–S; `check` lại.
+2. `boq_xml_tools.py hsloai FILE OUT` (bản 15/10/2026 chiều trở lên) để có cột O–R; `check` lại.
 3. `python3 tv_link.py link FILE OUT --libdir "<thư mục thư viện ME đã stage>" --linkbase "<đường dẫn Windows thật của thư mục thư viện trên máy người dùng>"`.
    - `--linkbase` là nơi file thư viện nằm **trên máy người dùng** (ví dụ `C:\Users\Admin\OneDrive - TDI Group\…\2. Thu vien gia`), không phải đường dẫn tạm của cầu nối. Không biết chắc thì hỏi người dùng.
    - `--libdir` phải là đúng bộ file đã dùng để nạp `TV` (script đối chiếu từng dòng theo Mã + Tên và giá; dòng không khớp được giữ giá tĩnh và được liệt kê).
@@ -41,7 +41,7 @@ Chạy `check` của `tv_loader.py` **trước** khi nối link (check đọc gi
 
 ## Chạy nhanh hơn (bản 22/10)
 
-- `link` mặc định chỉ nối 2 cột giá thô (Giá VL / Giá NC thư viện, cột P–Q). Giá gốc E/F đã bằng thô × hệ số nên vẫn cập nhật theo thư viện. Số link giảm khoảng một nửa. Muốn nối cả `Giá VL chưa CK` và `Giá NC ước tính` thì thêm `--cols all`.
+- `link` mặc định chỉ nối 2 cột giá thô (Giá VL / Giá NC thư viện, cột O–P). Giá gốc E/F đã bằng thô × hệ số nên vẫn cập nhật theo thư viện. Số link giảm khoảng một nửa. Muốn nối cả `Giá NC ước tính` thì thêm `--cols all`.
 - `--no-check`: không thêm cột `Kiểm dòng nguồn`, file nhẹ hơn nhưng mất cảnh báo lệch dòng khi thư viện bị chèn/xóa dòng (`verify` khi đó chỉ so giá).
 - `verify` đã sửa lỗi chậm: trước đây đọc từng ô nguồn riêng lẻ (mỗi lần quét lại sheet từ đầu, 6.887 dòng mất hơn 11 phút), nay mỗi sheet nguồn quét một lần.
 - Khi cập nhật link trong Excel, nên đặt Formulas → Calculation Options → Manual, Update Values xong rồi nhấn F9 một lần.

@@ -5,7 +5,7 @@
   python3 tv_link.py verify BOQ.xlsx --libdir LIBDIR
 
 Một chiều: ô giá trong TV = công thức trỏ vào ô giá của file thư viện; sửa trong BOQ không ghi ngược file thư viện.
-Cột nối: Giá VL / NC thư viện (thô) (P, Q), Giá VL chưa CK, Giá NC ước tính. Cột Giá VL / NC gốc (E, F) giữ nguyên
+Cột nối: Giá VL / NC thư viện (thô) (O, P), Giá NC ước tính. Cột Giá VL / NC gốc (E, F) giữ nguyên
 (= thô x hệ số Loại VL, do hsloai). Chạy SAU hsloai. Thêm cột cuối "Kiểm dòng nguồn" (OK / LỆCH DÒNG / KHÔNG LINK).
 Ghi bằng XML, không mở-lưu file BOQ bằng openpyxl.
 """
@@ -23,7 +23,7 @@ q = lambda t: '{%s}%s' % (NS, t)
 
 LINK_COLS = {  # cột TV -> tên cột chuẩn ở file nguồn
     'Giá VL thư viện (thô)': 'Giá VL gốc', 'Giá NC thư viện (thô)': 'Giá NC gốc',
-    'Giá VL chưa CK': 'Giá VL chưa CK', 'Giá NC ước tính': 'Giá NC ước tính'}
+    'Giá NC ước tính': 'Giá NC ước tính'}
 CHECK_COL = 'Kiểm dòng nguồn'
 
 
@@ -42,8 +42,6 @@ def std_name(top, sub):
     if s == 'vật liệu' and ('số liệu gốc' in t or t == ''): return 'Giá VL gốc'
     if s == 'nhân công' and ('số liệu gốc' in t or t == ''): return 'Giá NC gốc'
     if 'nhân công' in t and 'ước' in t: return 'Giá NC ước tính'
-    if ('báo giá' in t or 'báo gía' in t or 'b.giá' in t or 'vật tư theo báo giá' in t or 'chưa chiết khấu' in t) and 'nhân công' not in t:
-        return 'Giá VL chưa CK'
     if 'mã hiệu' in t and 'mã hiệu' not in s: return 'Mã hiệu'
     if t == 'tên công việc': return 'Tên công việc'
     if t.startswith('unit') or 'đ. vị' in t or t == 'đvt': return 'ĐVT'
@@ -246,7 +244,7 @@ def do_link(a):
     tn, sp, tbl, ws, names, c0, r0, r1, rows = load_tv(pkg)
     for need in list(LINK_COLS)[:2] + ['Mã hiệu', 'Tên công việc', 'File nguồn', 'Sheet nguồn']:
         if need not in names:
-            raise SystemExit('DỪNG: bảng TV thiếu cột "%s". Chạy hsloai (cột P–S) trước khi nối link.' % need)
+            raise SystemExit('DỪNG: bảng TV thiếu cột "%s". Chạy hsloai (cột O–R) trước khi nối link.' % need)
     if CHECK_COL in names: raise SystemExit('DỪNG: bảng TV đã có cột "%s" (đã nối link). Dùng verify, hoặc Break Link rồi nối lại.' % CHECK_COL)
     if any(re.match(r'xl/externalLinks/externalLink\d+\.xml$', n) and b'tv_link' in pkg.files.get(n.replace('externalLinks/', 'externalLinks/_rels/') + '.rels', b'') for n, b in pkg.files.items()):
         raise SystemExit('DỪNG: file đã có link do tv_link tạo.')
@@ -436,7 +434,7 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest='cmd', required=True)
     l = sp.add_parser('link'); l.add_argument('boq'); l.add_argument('out'); l.add_argument('--libdir', required=True); l.add_argument('--linkbase', required=True)
-    l.add_argument('--cols', choices=['raw', 'all'], default='raw', help='raw (mặc định): chỉ nối 2 cột giá thô P,Q; all: nối cả Giá VL chưa CK / Giá NC ước tính')
+    l.add_argument('--cols', choices=['raw', 'all'], default='raw', help='raw (mặc định): chỉ nối 2 cột giá thô O,P; all: nối cả Giá NC ước tính')
     l.add_argument('--no-check', action='store_true', help='không thêm cột Kiểm dòng nguồn (file nhẹ hơn, mở nhanh hơn; mất cảnh báo lệch dòng)')
     v = sp.add_parser('verify'); v.add_argument('boq'); v.add_argument('--libdir', required=True)
     a = ap.parse_args()

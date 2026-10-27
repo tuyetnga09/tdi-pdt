@@ -31,7 +31,7 @@ Mỗi mục ghi: trạng thái (`Đã áp` / `Không phát sinh` / `Lệch` / `C
 | QT21 Tên vùng rác, vòng, ô lỗi | `recalc`: ô lỗi 0, vòng 0, tên vùng rác 0 |
 | QT22 Không bỏ quy tắc A | So số mục A1–A12 với bản skill trước: không giảm |
 | QT23 Ô `Mã \| Tên` | Lọc cột Mã hiệu: 0 ô mã thuần / dạng cũ |
-| QT24 Hệ số Loại VL | `TV` có cột P–S; thử đổi hệ số trên bản sao chỉ đổi đúng Loại VL |
+| QT24 Hệ số Loại VL | `TV` có cột O–R; thử đổi hệ số trên bản sao chỉ đổi đúng Loại VL |
 | QT25 Bước 8 mặc định chạy | Danh sách sheet đã fill CĐT; tổng CĐT = KL × đơn giá TDI |
 | QT26 Bóc tách kể cả thiếu script | Số cụm / dòng con đã chèn; nếu thiếu `insert` đã chèn XML |
 | QT27 Ghép chỉ khi duyệt | Lọc `[Ghép]` / `terms`: mọi dòng có "GHÉP – đã được duyệt ngày …" |
@@ -48,7 +48,7 @@ Mỗi mục ghi: trạng thái (`Đã áp` / `Không phát sinh` / `Lệch` / `C
 | Mục | Cách kiểm |
 |---|---|
 | Đọc hết skill + references | Đã xem SKILL.md đến dòng cuối và mọi file `references/` |
-| Bước 0 (0a–0f) | Hệ từng sheet; nguồn thư viện ME / XD đã báo (QT31); `cols` OK; `tv_loader check` = 0/0/0; cặp cột giá; A9; hệ số hàng 4; không có `~$`, đã ghi mtime |
+| Bước 0 (0a–0f) | Hệ từng sheet; nguồn thư viện ME / XD đã báo (QT31); `cols` OK; `tv_loader check` = 0/0/0; cột giá; A9; hệ số hàng 4; không có `~$`, đã ghi mtime |
 | Bước 1 | Cột nhận theo tiêu đề cho từng sheet |
 | Bước 2 | Đã đọc phân mục, Ghi chú CĐT, spec / bản vẽ khi cần; dòng hỏi vật liệu đã liệt kê |
 | Bước 3 | Mọi dòng có Nhóm VT; không ép CTKhac |
