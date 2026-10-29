@@ -10,6 +10,9 @@ Cần boq_xml_tools.py cùng thư mục.
 Khóa khớp: (mô tả CĐT, ĐVT, tiêu đề phụ gần nhất, Chủng loại) -> nới dần: bỏ Chủng loại -> bỏ tiêu đề phụ (chỉ khi kết quả duy nhất).
 ASSIGN.json: [{"sheet","row","g","terms":[[g,"Mã hiệu"|"Tên công việc",val],...] hoặc "ma"+"keycol"+"keyval",
                "code_text","conf","note","coef","loai"}]
+Công thức ghi ra tham chiếu ô Nhóm VT / Mã hiệu của dòng (xem boq_xml_tools.tv_sumifs); export/diff đọc được cả dạng cũ viết cứng.
+Bản 26/10/2026: export đọc ĐVT dòng Con từ GIÁ TRỊ ô Đơn vị TDI (ô là công thức ĐVT thư viện của boq_dvt_tools.py, Bước 6f),
+không lưu chữ công thức vào Bảng khớp.
 """
 import sys, os, re, json, unicodedata, collections, argparse
 import openpyxl
@@ -21,7 +24,12 @@ MEM_COLS = ['Dự án', 'Sheet', 'Dòng', 'STT', 'Mô tả CĐT', 'ĐVT', 'Tiêu
             'Nhóm VT', 'Mã hiệu', 'Giá VL (terms)', 'Giá NC (terms)', 'Độ tin cậy', 'Ghi chú gán mã', 'Hệ số ĐV', 'Loại dòng']
 CUM_COLS = ['Dự án', 'Sheet', 'Dòng cha', 'Mô tả cha', 'ĐVT cha', 'Tiêu đề phụ', 'Chủng loại', 'Ghi chú cha', 'Độ tin cậy cha',
             'Thứ tự', 'g', 'key', 'val', 'ma', 'name', 'unit', 'coef', 'conf', 'note']
-SUMIFS = re.compile(r'SUMIFS\(TV\[(Giá [VN][LC][^\]]*)\],TV\[Column1\],(\$?[A-Z]+\$?\d+|"(?:[^"]|"")*"),TV\[(Mã hiệu|Tên công việc)\],"((?:[^"]|"")*)"\)')
+# Nhóm và khóa có thể là chuỗi viết cứng hoặc tham chiếu ô trên cùng dòng (bản 14/10/2026 trở đi ghi tham chiếu ô)
+SUMIFS = re.compile(r'SUMIFS\(TV\[(Giá [VN][LC][^\]]*)\],TV\[(?:Column1|Loại vật liệu)\],(\$?[A-Z]+\$?\d+|"(?:[^"]|"")*"),TV\[(Mã hiệu|Tên công việc)\],(\$?[A-Z]+\$?\d+|"(?:[^"]|"")*")\)')
+# bản 15/10/2026: tra Loại VL + Mã + Tên của chính dòng (cột phụ 'Mã tra cứu' / 'Tên tra cứu')
+SUMIFS2 = re.compile(r'SUMIFS\(TV\[(Giá [VN][LC][^\]]*)\],TV\[(?:Column1|Loại vật liệu)\],(\$?[A-Z]+\$?\d+|"(?:[^"]|"")*"),TV\[Mã hiệu\],IF\(\$?[A-Z]+\$?\d+="","<>§",\$?[A-Z]+\$?\d+\),TV\[Tên công việc\],IF\(\$?[A-Z]+\$?\d+="","<>§",\$?[A-Z]+\$?\d+\)\)')
+# ô Đơn vị TDI do boq_dvt_tools.py dvt ghi: IF(OR(mã trống...),<dự phòng>,IFERROR(INDEX(TV[ĐVT],...),<dự phòng>))
+DVT_FB = re.compile(r'^=IF\(OR\(.*?\),"((?:[^"]|"")*)",IFERROR\(INDEX\(TV\[')
 
 
 def norm(s):
@@ -32,6 +40,21 @@ def norm(s):
 def unq(s): return s.replace('""', '"')
 
 
+def unit_values(wbv, sheet, col):
+    """{dòng: giá trị đã tính} của một cột (đọc một lần, workbook data_only read_only)."""
+    ws = wbv[sheet]; ws.reset_dimensions()
+    return {i: r[0] for i, r in enumerate(ws.iter_rows(min_col=col, max_col=col, values_only=True), 1)}
+
+
+def unit_text(raw, row, uv):
+    """ĐVT để lưu: ô là công thức thì lấy giá trị đã tính; chưa có giá trị tính thì lấy ĐVT dự phòng ghi trong công thức."""
+    if not (isinstance(raw, str) and raw.startswith('=')): return raw
+    v = uv.get(row) if uv else None
+    if v not in (None, ''): return v
+    m = DVT_FB.match(raw)
+    return unq(m.group(1)) if m else ''
+
+
 # ------------------------------------------------------------ đọc BOQ
 def read_sheet(path, sheet):
     """Trả về (cols, rows): rows = list dict cho mọi dòng công việc (kể cả Con), giữ thứ tự."""
@@ -39,33 +62,42 @@ def read_sheet(path, sheet):
     wb = openpyxl.load_workbook(path, read_only=True)
     ws = wb[sheet]; ws.reset_dimensions()   # read_only cắt theo <dimension>, cột phụ mới thêm sẽ bị mất nếu không reset
     hidx = {h: C[h] for h in T.HELPERS}
-    remark = None
+    remark = None; ucol = 3; scol = None
     for r in ws.iter_rows(min_row=1, max_row=C['hdr_row'] + 2, max_col=C['name'] - 1):
         for c in r:
             if isinstance(c.value, str) and re.search(r'ghi ch[uú]|remark', c.value, re.I): remark = c.column
+            if isinstance(c.value, str) and re.fullmatch(r'(?i)\s*(đơn vị|đvt|unit)\s*', c.value): ucol = c.column
+            if isinstance(c.value, str) and re.fullmatch(r'(?i)\s*(thông số|quy cách|specification)\s*', c.value): scol = c.column
     out, heading = [], ''
     for i, r in enumerate(ws.iter_rows(min_row=C['hdr_row'] + 3, values_only=True), C['hdr_row'] + 3):
         g = lambda col: r[col - 1] if col and len(r) >= col else None
-        desc, unit = g(2), g(3)
+        desc, unit = g(2), g(ucol)
         is_con = C['Loại dòng'] and g(C['Loại dòng']) == 'Con'
         if (unit in (None, '') or str(unit).strip() == '') and not is_con:
             if desc not in (None, '') and not str(desc).startswith('=') and not re.match(r'(?i)phụ kiện', str(desc).strip()):
                 heading = str(desc).strip()
             continue
         out.append(dict(row=i, stt=g(1), desc=str(desc or '').strip(), unit=str(unit or '').strip(), heading=heading,
-                        cl=g(C['chung_loai']), remark=g(remark) if remark else None,
-                        code=g(C['code']), name=g(C['name']), unit_tdi=g(C['unit_tdi']), vl=g(C['vl0']), nc=g(C['nc0']),
+                        cl=g(C['chung_loai']), remark=g(remark) if remark else None, spec=g(scol) if scol else None,
+                        code=T.legacy_code(g(C['code'])), codenew=g(C['code']), name=g(C['name']), unit_tdi=g(C['unit_tdi']), vl=g(C['vl0']), nc=g(C['nc0']),
                         **{h: g(c) for h, c in hidx.items()}))
     return C, out
 
 
-def terms_of(f, group_of_row):
+def terms_of(f, group_of_row, code_of_row=None):
+    """Tách các số hạng SUMIFS. Tham chiếu ô -> lấy Nhóm VT / Mã hiệu của chính dòng."""
     if not isinstance(f, str) or not f.startswith('='): return []
     out = []
+    rc, rn = T.split_code(code_of_row) if code_of_row is not None else ('', '')
+    for m in SUMIFS2.finditer(f):      # dạng mới: mã nếu có, không thì tên
+        g = unq(m.group(2)[1:-1]) if m.group(2).startswith('"') else group_of_row
+        out.append([g, 'Mã hiệu', rc] if rc else [g, 'Tên công việc', rn])
+    f = SUMIFS2.sub('', f)
     for m in SUMIFS.finditer(f):
-        g = m.group(2)
+        g, v = m.group(2), m.group(4)
         g = unq(g[1:-1]) if g.startswith('"') else group_of_row
-        out.append([g, m.group(3), re.sub(r'~([~*?])', r'\1', unq(m.group(4)))])
+        v = re.sub(r'~([~*?])', r'\1', unq(v[1:-1])) if v.startswith('"') else (str(code_of_row) if code_of_row is not None else None)
+        out.append([g, m.group(3), v])
     return out
 
 
@@ -78,26 +110,29 @@ def keys(d):
 def cmd_export(f, mem, project, fixfile=None):
     fixes = json.load(open(fixfile)) if fixfile else {}
     wb = openpyxl.load_workbook(f, read_only=True)
+    wbv = openpyxl.load_workbook(f, read_only=True, data_only=True)   # giá trị đã tính của ô Đơn vị TDI (Bước 6f)
     M, CU = [], []
     for sh in wb.sheetnames:
         try: C, rows = read_sheet(f, sh)
         except SystemExit: continue
         if not any(r.get('Nhóm VT') or r.get('Độ tin cậy') for r in rows): continue
-        cur = None; k = 0
+        cur = None; k = 0; uv = None
         for d in rows:
             fx = fixes.get('%s!%d' % (sh, d['row']))
             if d.get('Loại dòng') == 'Con':
                 if cur is None: continue
                 k += 1
-                tv = terms_of(d['vl'], d.get('Nhóm VT')) or terms_of(d['nc'], d.get('Nhóm VT'))
+                tv = terms_of(d['vl'], d.get('Nhóm VT'), d['codenew']) or terms_of(d['nc'], d.get('Nhóm VT'), d['codenew'])
                 g, key, val = (tv[0] if tv else [d.get('Nhóm VT'), None, None])
+                if uv is None and isinstance(d['unit_tdi'], str) and d['unit_tdi'].startswith('='): uv = unit_values(wbv, sh, C['unit_tdi'])
                 CU.append([project, sh, cur['row'], cur['desc'], cur['unit'], cur['heading'], cur['cl'], cur.get('Ghi chú gán mã'),
-                           cur.get('Độ tin cậy'), k, g, key, val, d['code'] if key == 'Mã hiệu' else '', d['name'], d['unit_tdi'],
+                           cur.get('Độ tin cậy'), k, g, key, val, d['codenew'] if key == 'Mã hiệu' else '', d['name'],
+                           unit_text(d['unit_tdi'], d['row'], uv),
                            d.get('Hệ số ĐV') or 1, d.get('Độ tin cậy'), d.get('Ghi chú gán mã')])
                 continue
             cur, k = (d if d.get('Loại dòng') == 'Cụm' else None), 0
-            vt, nt = terms_of(d['vl'], d.get('Nhóm VT')), terms_of(d['nc'], d.get('Nhóm VT'))
-            rec = dict(g=d.get('Nhóm VT'), code=d['code'], vt=vt, nt=nt, conf=d.get('Độ tin cậy'), note=d.get('Ghi chú gán mã'),
+            vt, nt = terms_of(d['vl'], d.get('Nhóm VT'), d['codenew']), terms_of(d['nc'], d.get('Nhóm VT'), d['codenew'])
+            rec = dict(g=d.get('Nhóm VT'), code=d['codenew'], vt=vt, nt=nt, conf=d.get('Độ tin cậy'), note=d.get('Ghi chú gán mã'),
                        coef=d.get('Hệ số ĐV'), loai=d.get('Loại dòng'))
             if fx: rec.update(fx)
             if not (rec['g'] or rec['conf']): continue
@@ -151,25 +186,74 @@ def lookup(idx, d, project=None):
     return None, None
 
 
+# ------------------------------------------------------------ Bảng khớp cũ (nhóm theo file) -> Loại vật liệu (theo sheet)
+def tv_oldmap(path):
+    """(nhóm cũ, key, val) -> {loại VL mới}; nhóm cũ -> {loại VL mới}; tập tên mới. Cần cột 'Nhóm file' của tv_loader v3."""
+    wb = openpyxl.load_workbook(path, read_only=True)
+    ws = next((wb[s] for s in wb.sheetnames if s.strip().lower() == '2 thu vien gia'), None)
+    rows = ws.iter_rows(values_only=True); H = [str(x) for x in next(rows)]
+    OM, NEWOF, names = collections.defaultdict(set), collections.defaultdict(set), set()
+    if 'Nhóm file' not in H: return OM, NEWOF, names
+    ig = H.index('Loại vật liệu') if 'Loại vật liệu' in H else 0
+    io, im, it = H.index('Nhóm file'), H.index('Mã hiệu'), H.index('Tên công việc')
+    for r in rows:
+        lv, old = r[ig], r[io]
+        if lv is None: continue
+        names.add(lv); NEWOF[old].add(lv)
+        OM[(old, 'Mã hiệu', str(r[im]))].add(lv); OM[(old, 'Tên công việc', str(r[it]))].add(lv)
+    return OM, NEWOF, names
+
+
+def remap_hit(hit, kids, OM, NEWOF, names):
+    """Đưa một dòng Bảng khớp (có thể ghi bằng nhóm cũ) sang Loại vật liệu mới. Trả (hit mới, kids mới, danh sách mơ hồ)."""
+    amb = []
+    def mapg(g, key, val):
+        if g in names or not g: return g
+        c = OM.get((g, key, str(val))) if key else None
+        if c and len(c) == 1: return next(iter(c))
+        if c and len(c) > 1: amb.append((g, key, val)); return g
+        n = NEWOF.get(g)
+        return next(iter(n)) if n and len(n) == 1 else g
+    hit = dict(hit)
+    for fld in ('Giá VL (terms)', 'Giá NC (terms)'):
+        if hit.get(fld):
+            ts = json.loads(hit[fld]); hit[fld] = json.dumps([[mapg(g, k, v), k, v] for g, k, v in ts], ensure_ascii=False)
+    g0 = hit.get('Nhóm VT')
+    if g0 and g0 not in names:
+        first = json.loads(hit['Giá VL (terms)'] or hit['Giá NC (terms)'] or '[]')
+        if ' + ' in g0: hit['Nhóm VT'] = ' + '.join(mapg(x.strip(), None, None) for x in g0.split(' + '))
+        elif first and first[0][0] in names: hit['Nhóm VT'] = first[0][0]
+        else: hit['Nhóm VT'] = mapg(g0, None, None)
+    nk = []
+    for k in kids or []:
+        k = dict(k)
+        if k.get('g') and k['g'] not in names: k['g'] = mapg(k['g'], k.get('key'), k.get('val'))
+        nk.append(k)
+    return hit, nk, amb
+
+
 # ------------------------------------------------------------ writer
 def tv_keys(path):
     wb = openpyxl.load_workbook(path, read_only=True)
     ws = next((wb[s] for s in wb.sheetnames if s.strip().lower() == '2 thu vien gia'), None)
     if ws is None: raise SystemExit('DỪNG: file chưa có sheet "2 Thu vien gia" (bảng TV). Nạp thư viện trước (skill chuyển template).')
     rows = ws.iter_rows(values_only=True); H = [str(x) for x in next(rows)]
-    ig, im, it = H.index('Column1'), H.index('Mã hiệu'), H.index('Tên công việc')
+    ig, im, it = (H.index('Loại vật liệu') if 'Loại vật liệu' in H else H.index('Column1')), H.index('Mã hiệu'), H.index('Tên công việc')
     S = collections.Counter()
     for r in rows:
         S[(r[ig], 'Mã hiệu', str(r[im]))] += 1; S[(r[ig], 'Tên công việc', str(r[it]))] += 1
     return S
 
 
-def formula(terms, col):
-    return '+'.join('SUMIFS(TV[%s],TV[Column1],"%s",TV[%s],"%s")' % (col, T.esc(g), k, T.esc(v)) for g, k, v in terms)
+def formula(terms, col, r=None, C=None, row_g=None, row_code=None):
+    """Công thức giá: tham chiếu ô Nhóm VT / Mã hiệu của dòng r khi khớp, còn lại viết cứng (xem T.tv_sumifs)."""
+    gcol, ccol = (C['Nhóm VT'], C['code']) if C else (None, None)
+    return '+'.join(T.tv_sumifs(col, g, k, v, r, gcol, row_g, ccol, row_code,
+                                C.get('Mã tra cứu') if C else None, C.get('Tên tra cứu') if C else None) for g, k, v in terms)
 
 
 def write_rows(f, out, assigns):
-    pkg = T.Pkg(f); by = collections.defaultdict(list)
+    pkg = T.Pkg(f); by = collections.defaultdict(list); TVI = T.tv_index(pkg)
     for a in assigns: by[a['sheet']].append(a)
     for sh, lst in by.items():
         C = T.detect_cols(pkg, sh)
@@ -178,11 +262,13 @@ def write_rows(f, out, assigns):
         sd = pkg.root(sh).find(T.q('sheetData')); rows = {int(r.get('r')): r for r in sd}
         for a in lst:
             row = rows[a['row']]
-            T.setc(row, C['code'], a.get('code_text') or '')
+            ctext = T.new_code_text(TVI, a.get('g') or '', a.get('code_text') or '')   # 'Mã | Tên công việc'
+            T.setc(row, C['code'], ctext)
+            T.set_helpers(row, C['code'], C['Mã tra cứu'], C['Tên tra cứu'], ctext)
             for col, lc, key in ((C['vl0'], 'Giá VL gốc', 'vt'), (C['nc0'], 'Giá NC gốc', 'nt')):
                 tm = a.get(key)
                 if tm:
-                    fx = formula(tm, lc)
+                    fx = formula(tm, lc, a['row'], C, a.get('g') or '', ctext)
                     if a.get('coef') not in (None, '', 1, 1.0) and a.get('loai') != 'Cụm': fx = '(%s)*%s' % (fx, a['coef'])
                     T.setc(row, col, formula=fx)
                 else:
@@ -201,7 +287,7 @@ def write_rows(f, out, assigns):
 # ------------------------------------------------------------ apply
 def cmd_apply(f, out, mem, project=None):
     idx, cum = load_mem(mem, project)
-    TVK = tv_keys(f)
+    TVK = tv_keys(f); OM, NEWOF, NAMES = tv_oldmap(f)
     wb = openpyxl.load_workbook(f, read_only=True)
     assigns, todo, plan, stat = [], [], [], collections.Counter()
     for sh in wb.sheetnames:
@@ -210,25 +296,30 @@ def cmd_apply(f, out, mem, project=None):
         for d in rows:
             if d.get('Loại dòng') == 'Con': continue
             hit, how = lookup(idx, d, project)
-            ctx = dict(sheet=sh, row=d['row'], stt=d['stt'], desc=d['desc'], unit=d['unit'], heading=d['heading'], cl=d['cl'], remark=d['remark'])
+            ctx = dict(sheet=sh, row=d['row'], stt=d['stt'], desc=d['desc'], unit=d['unit'], heading=d['heading'], cl=d['cl'], remark=d['remark'], spec=d.get('spec'))
             if not hit:
                 todo.append(dict(ctx, reason=how or 'chưa có trong bảng khớp')); stat['todo'] += 1; continue
+            kids0 = cum.get((hit['Dự án'], hit['Sheet'], hit['Dòng']), [])
+            hit, kids1, amb = remap_hit(hit, kids0, OM, NEWOF, NAMES)
+            if amb:
+                todo.append(dict(ctx, reason='bảng khớp ghi nhóm cũ, mã có ở nhiều loại vật liệu (sheet chính + phụ kiện): chọn tay %s' % amb, suggest=hit['Mã hiệu'])); stat['todo'] += 1; continue
             vt = json.loads(hit['Giá VL (terms)']) if hit['Giá VL (terms)'] else []
             nt = json.loads(hit['Giá NC (terms)']) if hit['Giá NC (terms)'] else []
             bad = [t for t in vt + nt if TVK[tuple(t)] == 0]
             if bad:
                 todo.append(dict(ctx, reason='mã trong bảng khớp không có ở thư viện dự án này: %s' % bad, suggest=hit['Mã hiệu'])); stat['todo'] += 1; continue
-            dup = [t for t in vt + nt if TVK[tuple(t)] > 1]
+            dup = [] if T.SEP in str(hit['Mã hiệu'] or '') else [t for t in vt + nt if TVK[tuple(t)] > 1]   # 'Mã | Tên' đã phân biệt khóa trùng
             note = hit['Ghi chú gán mã'] or ''
             if hit['Loại dòng'] == 'Cụm':
-                kids = cum.get((hit['Dự án'], hit['Sheet'], hit['Dòng']), [])
+                kids = kids1
                 kids.sort(key=lambda k: k['Thứ tự'])
                 if not kids:   # cụm chưa có cấu hình: giữ nhãn, không giá
                     assigns.append(dict(sheet=sh, row=d['row'], g=hit['Nhóm VT'], code_text='', vt=[], nt=[], conf=hit['Độ tin cậy'],
                                         note=note, coef='', loai='Cụm'))
                     stat['cụm chưa cấu hình'] += 1; continue
-                ch = [dict(g=k['g'], key=k['key'], val=k['val'], ma=k['ma'], name=k['name'], unit=k['unit'], coef=k['coef'] or 1,
-                           conf=k['conf'], note=k['note'] or '') for k in kids]
+                ch = [dict(g=k['g'], key=k['key'], val=k['val'], ma=k['ma'], name=k['name'],
+                           unit=('' if str(k['unit'] or '').startswith('=') else k['unit']), coef=k['coef'] or 1,
+                           conf=k['conf'], note=k['note'] or '') for k in kids]   # Bảng khớp cũ lỡ lưu chữ công thức ĐVT -> bỏ
                 pnote = re.sub(r'\. Đơn giá = SUMPRODUCT.*$', '', note)
                 plan.append([sh, d['row'], d['desc'][:15], ch, pnote, hit['Độ tin cậy']])
                 assigns.append(dict(sheet=sh, row=d['row'], g=hit['Nhóm VT'], code_text='', vt=[], nt=[], conf=hit['Độ tin cậy'],
@@ -276,7 +367,7 @@ def cmd_diff(f, mem, project=None):
             line = '%s!%d %s | bảng khớp: %s %s | file: %s %s | %s' % (sh, d['row'], d['desc'][:45], hit['Mã hiệu'] or hit['Loại dòng'], hit['Độ tin cậy'],
                                                                    d['code'] or d.get('Loại dòng'), d.get('Độ tin cậy'), str(d.get('Ghi chú gán mã') or '')[:60])
             if had and not has: lost.append(line)
-            elif str(hit['Mã hiệu'] or '') != str(d['code'] or '') or hit['Độ tin cậy'] != d.get('Độ tin cậy'): changed.append(line)
+            elif T.legacy_code(hit['Mã hiệu']) != str(d['code'] or '') or hit['Độ tin cậy'] != d.get('Độ tin cậy'): changed.append(line)
             elif not had and has: new.append(line)
     print('MẤT mã/giá so với bảng khớp: %d' % len(lost)); print('\n'.join(lost[:300]))
     print('\nĐỔI mã/độ tin cậy: %d' % len(changed)); print('\n'.join(changed[:300]))

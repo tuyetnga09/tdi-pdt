@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
 """tv_link.py - nối bảng TV (sheet "2 Thu vien gia") với file thư viện giá bằng workbook link (Data > Edit Links).
 
-  python3 tv_link.py link   BOQ.xlsx OUT.xlsx --libdir LIBDIR --linkbase "C:\\...\\2. Thu vien gia"
+  python3 tv_link.py link   BOQ.xlsx OUT.xlsx --libdir LIBDIR --linkrel "2. Thu vien gia"
+  python3 tv_link.py relink BOQ.xlsx OUT.xlsx --linkrel "2. Thu vien gia"      (sửa file đã nối bằng đường dẫn tuyệt đối)
   python3 tv_link.py verify BOQ.xlsx --libdir LIBDIR
 
+ĐƯỜNG DẪN LINK LÀ TƯƠNG ĐỐI (bản 26/10/2026): tính từ thư mục chứa file BOQ tới thư mục thư viện, vd "2. Thu vien gia"
+(thư viện cùng cấp file BOQ) hoặc "../1.HSMT/2. Thu vien gia". Excel tự ghép với vị trí file BOQ trên máy đang mở, nên
+không phụ thuộc tên user (C:\\Users\\<ai>), gốc OneDrive / SharePoint hay ổ đĩa. Không ghi cứng đường dẫn tuyệt đối.
+  --linkrel REL                 đường dẫn tương đối (ưu tiên)
+  --boqdir DIR --linkbase DIR   đường dẫn thật trên máy người dùng: script tự tính tương đối (cùng ổ đĩa)
+  --linkbase DIR --absolute     cách cũ (tuyệt đối, chỉ chạy trên đúng máy đó) - không dùng nếu không bắt buộc
+
 Một chiều: ô giá trong TV = công thức trỏ vào ô giá của file thư viện; sửa trong BOQ không ghi ngược file thư viện.
-Cột nối: Giá VL / NC thư viện (thô) (O, P), Giá NC ước tính. Cột Giá VL / NC gốc (E, F) giữ nguyên
+Cột nối: Giá VL / NC thư viện (thô) (P, Q), Giá VL chưa CK, Giá NC ước tính. Cột Giá VL / NC gốc (E, F) giữ nguyên
 (= thô x hệ số Loại VL, do hsloai). Chạy SAU hsloai. Thêm cột cuối "Kiểm dòng nguồn" (OK / LỆCH DÒNG / KHÔNG LINK).
 Ghi bằng XML, không mở-lưu file BOQ bằng openpyxl.
 """
-import sys, os, re, zipfile, argparse, bisect, collections
+import sys, os, re, zipfile, argparse, bisect, collections, urllib.parse, ntpath, posixpath
 import openpyxl
 from lxml import etree
 from openpyxl.utils import get_column_letter as CL, column_index_from_string as CI
@@ -23,8 +31,34 @@ q = lambda t: '{%s}%s' % (NS, t)
 
 LINK_COLS = {  # cột TV -> tên cột chuẩn ở file nguồn
     'Giá VL thư viện (thô)': 'Giá VL gốc', 'Giá NC thư viện (thô)': 'Giá NC gốc',
-    'Giá NC ước tính': 'Giá NC ước tính'}
+    'Giá VL chưa CK': 'Giá VL chưa CK', 'Giá NC ước tính': 'Giá NC ước tính'}
 CHECK_COL = 'Kiểm dòng nguồn'
+
+
+# ---- đường dẫn link (bản 26/10/2026) ----
+def rel_dir(a):
+    """Thư mục thư viện tính TƯƠNG ĐỐI từ thư mục chứa file BOQ."""
+    if getattr(a, 'linkrel', None) is not None: rel = a.linkrel
+    elif getattr(a, 'boqdir', None) and getattr(a, 'linkbase', None):
+        P = ntpath if (':' in a.boqdir or '\\' in a.boqdir) else posixpath
+        try: rel = P.relpath(a.linkbase, a.boqdir)
+        except ValueError: raise SystemExit('DỪNG: thư mục BOQ và thư mục thư viện khác ổ đĩa, không nối tương đối được - để thư viện cùng cây thư mục dự án')
+    else: raise SystemExit('Thiếu --linkrel (vd "2. Thu vien gia") hoặc cặp --boqdir / --linkbase. Không ghi cứng đường dẫn tuyệt đối.')
+    rel = rel.strip()
+    if re.match(r'^([A-Za-z]:|\\\\|/|https?:|file:)', rel):
+        raise SystemExit('DỪNG: --linkrel phải là đường dẫn TƯƠNG ĐỐI (không bắt đầu bằng ổ đĩa / \\\\ / http / file:)')
+    return rel
+
+
+def link_target(a, fn):
+    """Target của externalLinkPath. Mặc định tương đối (URI: dấu '/', mã hóa %); --absolute mới dùng file:///."""
+    if getattr(a, 'absolute', False):
+        if not getattr(a, 'linkbase', None): raise SystemExit('--absolute cần --linkbase')
+        lb = a.linkbase.rstrip('\\/')
+        target = ('file://' + lb + '/' + fn) if lb.startswith('/') else ('file:///' + lb + '\\' + fn)
+        return target.replace(' ', '%20')   # Excel bỏ cả link nếu Target còn dấu cách (đã gặp 22/10/2026)
+    parts = [p for p in re.split(r'[\\/]+', rel_dir(a)) if p not in ('', '.')]
+    return '/'.join(urllib.parse.quote(p, safe="()!$&',;=@~+-._") for p in parts + [fn])
 
 
 def norm(s): return re.sub(r'\s+', ' ', str(s or '')).strip().lower()
@@ -42,6 +76,8 @@ def std_name(top, sub):
     if s == 'vật liệu' and ('số liệu gốc' in t or t == ''): return 'Giá VL gốc'
     if s == 'nhân công' and ('số liệu gốc' in t or t == ''): return 'Giá NC gốc'
     if 'nhân công' in t and 'ước' in t: return 'Giá NC ước tính'
+    if ('báo giá' in t or 'báo gía' in t or 'b.giá' in t or 'vật tư theo báo giá' in t or 'chưa chiết khấu' in t) and 'nhân công' not in t:
+        return 'Giá VL chưa CK'
     if 'mã hiệu' in t and 'mã hiệu' not in s: return 'Mã hiệu'
     if t == 'tên công việc': return 'Tên công việc'
     if t.startswith('unit') or 'đ. vị' in t or t == 'đvt': return 'ĐVT'
@@ -240,11 +276,12 @@ def ext_xml(sheets, used, relid='rId1'):
 
 
 def do_link(a):
+    link_target(a, 'x.xlsx')   # kiểm tham số đường dẫn trước khi làm việc nặng
     pkg = Pkg(a.boq)
     tn, sp, tbl, ws, names, c0, r0, r1, rows = load_tv(pkg)
     for need in list(LINK_COLS)[:2] + ['Mã hiệu', 'Tên công việc', 'File nguồn', 'Sheet nguồn']:
         if need not in names:
-            raise SystemExit('DỪNG: bảng TV thiếu cột "%s". Chạy hsloai (cột O–R) trước khi nối link.' % need)
+            raise SystemExit('DỪNG: bảng TV thiếu cột "%s". Chạy hsloai (cột P–S) trước khi nối link.' % need)
     if CHECK_COL in names: raise SystemExit('DỪNG: bảng TV đã có cột "%s" (đã nối link). Dùng verify, hoặc Break Link rồi nối lại.' % CHECK_COL)
     if any(re.match(r'xl/externalLinks/externalLink\d+\.xml$', n) and b'tv_link' in pkg.files.get(n.replace('externalLinks/', 'externalLinks/_rels/') + '.rels', b'') for n, b in pkg.files.items()):
         raise SystemExit('DỪNG: file đã có link do tv_link tạo.')
@@ -332,8 +369,7 @@ def do_link(a):
     for k, fn in enumerate(files):
         part = 'xl/externalLinks/externalLink%d.xml' % (n_ext + k)
         pkg.new[part] = ext_xml(srcwb[fn].sheetnames, used[fn])
-        lb = a.linkbase.rstrip('\\/')
-        target = ('file://' + lb + '/' + fn) if lb.startswith('/') else ('file:///' + lb + '\\' + fn)
+        target = link_target(a, fn)
         pkg.new['xl/externalLinks/_rels/externalLink%d.xml.rels' % (n_ext + k)] = (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="%s">'
             '<Relationship Id="rId1" Type="%s/externalLinkPath" Target="%s" TargetMode="External"/></Relationships>'
@@ -353,7 +389,31 @@ def do_link(a):
     print('Đã nối %d / %d dòng TV với %d file thư viện (%d ô giá). Cột kiểm: %s.' % (stat['dòng đã nối'], tot, len(files), n_link, ('"%s"' % CHECK_COL) if check else 'không có (--no-check)'))
     for k, v in stat.items():
         if k != 'dòng đã nối': print('  %s: %d' % (k, v))
-    print('Link trỏ tới: %s\\<tên file>' % a.linkbase.rstrip('\\/'))
+    print('Link trỏ tới: %s%s' % (urllib.parse.unquote(link_target(a, '<tên file>')),
+                                  '' if getattr(a, 'absolute', False) else '  (tương đối, tính từ thư mục chứa file BOQ)'))
+
+
+def do_relink(a):
+    """Đổi Target của mọi externalLink sang đường dẫn mới (mặc định tương đối). Chỉ sửa xl/externalLinks/_rels, không đụng ô nào."""
+    link_target(a, 'x.xlsx')
+    z = zipfile.ZipFile(a.boq); infos = z.infolist(); files = {i.filename: z.read(i.filename) for i in infos}; z.close()
+    n = 0
+    for k in sorted(files):
+        if not re.match(r'xl/externalLinks/_rels/externalLink\d+\.xml\.rels$', k): continue
+        root = etree.fromstring(files[k])
+        for r in root:
+            if not r.get('Type', '').endswith('/externalLinkPath'): continue
+            old = r.get('Target')
+            fn = urllib.parse.unquote(re.split(r'[\\/]', old)[-1])
+            new = link_target(a, fn)
+            if new != old: r.set('Target', new); n += 1
+            print('  %s\n    -> %s' % (urllib.parse.unquote(old), urllib.parse.unquote(new)))
+        files[k] = etree.tostring(root, xml_declaration=True, encoding='UTF-8', standalone=True)
+    if not n: print('Không có link nào cần đổi.')
+    zo = zipfile.ZipFile(a.out, 'w', zipfile.ZIP_DEFLATED)
+    for it in infos: zo.writestr(it, files[it.filename])
+    zo.close()
+    print('Đã đổi %d link. Mở file bằng Excel desktop từ thư mục đồng bộ trên máy -> Cho phép nội dung -> Update Values.' % n)
 
 
 def do_verify(a):
@@ -366,7 +426,7 @@ def do_verify(a):
         m = re.match(r'xl/externalLinks/externalLink(\d+)\.xml$', k)
         if m:
             rl = etree.fromstring(pkg.files['xl/externalLinks/_rels/externalLink%s.xml.rels' % m.group(1)])
-            ext[m.group(1)] = os.path.basename(rl[0].get('Target').replace('\\', '/'))
+            ext[m.group(1)] = urllib.parse.unquote(os.path.basename(rl[0].get('Target').replace('\\', '/')))
     order = {}
     for i, rid in enumerate(r.get('{%s}id' % RNS) for r in pkg.xml('xl/workbook.xml').find(q('externalReferences'))):
         rels = {r.get('Id'): r.get('Target') for r in pkg.xml('xl/_rels/workbook.xml.rels')}
@@ -433,9 +493,15 @@ def do_verify(a):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     sp = ap.add_subparsers(dest='cmd', required=True)
-    l = sp.add_parser('link'); l.add_argument('boq'); l.add_argument('out'); l.add_argument('--libdir', required=True); l.add_argument('--linkbase', required=True)
-    l.add_argument('--cols', choices=['raw', 'all'], default='raw', help='raw (mặc định): chỉ nối 2 cột giá thô O,P; all: nối cả Giá NC ước tính')
+    l = sp.add_parser('link'); l.add_argument('boq'); l.add_argument('out'); l.add_argument('--libdir', required=True)
+    l.add_argument('--cols', choices=['raw', 'all'], default='raw', help='raw (mặc định): chỉ nối 2 cột giá thô P,Q; all: nối cả Giá VL chưa CK / Giá NC ước tính')
     l.add_argument('--no-check', action='store_true', help='không thêm cột Kiểm dòng nguồn (file nhẹ hơn, mở nhanh hơn; mất cảnh báo lệch dòng)')
+    rl = sp.add_parser('relink'); rl.add_argument('boq'); rl.add_argument('out')
+    for p in (l, rl):
+        p.add_argument('--linkrel', help='đường dẫn TƯƠNG ĐỐI từ thư mục chứa BOQ tới thư mục thư viện, vd "2. Thu vien gia"')
+        p.add_argument('--boqdir', help='thư mục chứa BOQ trên máy người dùng (dùng cùng --linkbase để tự tính tương đối)')
+        p.add_argument('--linkbase', help='thư mục thư viện trên máy người dùng')
+        p.add_argument('--absolute', action='store_true', help='cách cũ: ghi đường dẫn tuyệt đối (chỉ chạy trên đúng máy đó)')
     v = sp.add_parser('verify'); v.add_argument('boq'); v.add_argument('--libdir', required=True)
     a = ap.parse_args()
-    do_link(a) if a.cmd == 'link' else do_verify(a)
+    {'link': do_link, 'relink': do_relink, 'verify': do_verify}[a.cmd](a)
